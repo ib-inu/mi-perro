@@ -1,11 +1,14 @@
-/* eslint-disable react/prop-types */
-import { createContext, ReactNode, useContext, useState } from "react";
-import useDogsList from "../hooks/useDogsList";
+"use client";
+
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { fetchDogData } from "../api/dogsApi";
 
 type DogsContextType = {
     query: string,
     setQuery: React.Dispatch<React.SetStateAction<string>>,
-    dogImages: string
+    dogsImage: string[],
+    isLoading: boolean,
+    error: string,
 
 }
 
@@ -19,24 +22,41 @@ const DogsContext = createContext<DogsContextType | undefined>(undefined);
 
 function DogsProvider({ children }: DogsContextProviderProps) {
     const [query, setQuery] = useState("");
+    const [dogsImage, setDogsImage] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string>("");
 
+    useEffect(() => {
+        if (query.length < 2) return;
 
+        async function fetchDog() {
+            try {
+                setIsLoading(true);
+                setError("");
 
-    const { data: dogImages, isLoading, error } = useDogsList(query);
+                const res = await fetchDogData(query);
 
+                setDogsImage(res);
+            } catch (e) {
+                const errorMessage = e instanceof Error ? e.message : "Something went wrong!";
+                setError(errorMessage);
+            } finally {
+                setIsLoading(false);
+            }
+        }
 
-
+        fetchDog();
+    }, [query]);
 
     return (
         <DogsContext.Provider value={{
-            query, setQuery, dogImages, isLoading,
-            error
-
+            query, setQuery, dogsImage, isLoading, error
         }}>
             {children}
         </DogsContext.Provider>
-    )
+    );
 }
+
 
 function useDogs() {
     const context = useContext(DogsContext);
